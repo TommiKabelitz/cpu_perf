@@ -1,7 +1,7 @@
 use std::io;
 use std::os::unix::io::RawFd;
 
-use libc::{_IO, Ioctl, SYS_perf_event_open, pid_t, syscall};
+use libc::{_IO, Ioctl, SYS_perf_event_open, ioctl, pid_t, read, syscall};
 
 use crate::perf_events::flags::PerfEventFlags;
 
@@ -9,8 +9,16 @@ pub mod flags;
 
 pub const PERF_EVENT_IOC_ENABLE: Ioctl = _IO(b'$' as u32, 0);
 pub const PERF_EVENT_IOC_DISABLE: Ioctl = _IO(b'$' as u32, 1);
-pub const _PERF_EVENT_IOC_REFRESH: Ioctl = _IO(b'$' as u32, 2);
+pub const PERF_EVENT_IOC_REFRESH: Ioctl = _IO(b'$' as u32, 2);
 pub const PERF_EVENT_IOC_RESET: Ioctl = _IO(b'$' as u32, 3);
+
+#[repr(u64)]
+pub enum EventIOState {
+    Enable = PERF_EVENT_IOC_ENABLE,
+    Disable = PERF_EVENT_IOC_DISABLE,
+    Refresh = PERF_EVENT_IOC_REFRESH,
+    _Reset = PERF_EVENT_IOC_RESET,
+}
 
 #[allow(dead_code)]
 pub enum EventType {
@@ -85,38 +93,85 @@ impl PerfEventAttr {
 
 pub const PERF_TYPE_HARDWARE: u32 = 0;
 
-// pub const _PERF_COUNT_HW_CPU_CYCLES: u64 = 0;
-// pub const _PERF_COUNT_HW_INSTRUCTIONS: u64 = 1;
-// pub const PERF_COUNT_HW_CACHE_REFERENCES: u64 = 2;
-// pub const PERF_COUNT_HW_CACHE_MISSES: u64 = 3;
-// pub const PERF_COUNT_HW_BRANCH_INSTRUCTIONS: u64 = 4;
-// pub const PERF_COUNT_HW_BRANCH_MISSES: u64 = 5;
-// pub const _PERF_COUNT_HW_BUS_CYCLES: u64 = 6;
-// pub const _PERF_COUNT_HW_STALLED_CYCLES_FRONTEND: u64 = 7;
-// pub const _PERF_COUNT_HW_STALLED_CYCLES_BACKEND: u64 = 8;
-// pub const _PERF_COUNT_HW_REF_CPU_CYCLES: u64 = 9;
+const SIZE_OF_U64: usize = size_of::<u64>();
+const SIZE_OF_U64_AS_ISIZE: isize = size_of::<u64>() as isize;
 
-pub fn perf_event_open(
-    attr: &mut PerfEventAttr,
-    pid: pid_t,
-    cpu: i32,
-    group_fd: RawFd,
-    flags: u64,
-) -> io::Result<RawFd> {
-    unsafe {
-        let fd = syscall(
-            SYS_perf_event_open,
-            attr as *mut PerfEventAttr,
-            pid,
-            cpu,
-            group_fd,
-            flags,
-        ) as RawFd;
+pub struct PerfEvent {
+    _attrs: PerfEventAttr,
+    pub fd: i32,
+}
 
-        if fd < 0 {
-            Err(io::Error::last_os_error())
+impl PerfEvent {
+    pub fn open(
+        mut attrs: PerfEventAttr,
+        parent_fd: Option<RawFd>,
+        pid: pid_t,
+        cpu_id: i32,
+        flags: u64,
+    ) -> io::Result<Self> {
+        // perf_event_open convention is to DISABLE parent and ENABLE
+        // children who inherit the FD
+        let group_fd = if let Some(group_fd) = parent_fd {
+            attrs.flags &= (!PerfEventFlags::DISABLED).bits();
+            group_fd
         } else {
-            Ok(fd)
+            attrs.flags &= (PerfEventFlags::DISABLED).bits();
+            -1
+        };
+
+        let fd = unsafe {
+            let fd = syscall(
+                SYS_perf_event_open,
+                &mut attrs as *mut PerfEventAttr,
+                pid,
+                cpu_id,
+                group_fd,
+                flags,
+            ) as RawFd;
+
+            if fd < 0 {
+                return Err(io::Error::last_os_error());
+            } else {
+                fd
+            }
+        };
+        Ok(Self { _attrs: attrs, fd })
+    }
+
+    pub fn update_file_state(&self, state: EventIOState) {
+        unsafe { ioctl(self.fd, state as u64, 0) };
+    }
+
+    pub fn get_count(&self) -> io::Result<u64> {
+        let mut count: u64 = 0;
+        let read_res = unsafe { read(self.fd, &mut count as *mut _ as *mut _, SIZE_OF_U64) };
+        match read_res {
+            -1 => Err(io::Error::last_os_error()),
+            0 => Err(io::Error::new(
+                io::ErrorKind::UnexpectedEof,
+                "EOF while reading perf counter",
+            )),
+            SIZE_OF_U64_AS_ISIZE => Ok(count),
+            n if n < SIZE_OF_U64 as isize => Err(io::Error::new(
+                io::ErrorKind::UnexpectedEof,
+                format!("short read: got {} bytes, expected {}", n, SIZE_OF_U64),
+            )),
+            _ => Err(io::Error::new(
+                io::ErrorKind::Other,
+                format!("Somehow wrote too many bytes"),
+            )),
+        }
+    }
+}
+
+impl Drop for PerfEvent {
+    fn drop(&mut self) {
+        // Avoid double close
+        if self.fd >= 0 {
+            unsafe {
+                let _ = libc::close(self.fd);
+            }
+            self.fd = -1;
         }
     }
 }
