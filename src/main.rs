@@ -2,14 +2,17 @@ use std::io;
 use std::thread::sleep;
 use std::time::Duration;
 
-mod perf_events;
-
-use perf_events::{EventIOState, PerfEvent, PerfEventAttr, flags::PerfEventFlags};
-
-use crate::perf_events::EventType;
+use cpu_perf::perf_events::{EventIOState, EventSet};
 
 fn main() -> io::Result<()> {
     let cpu_id = 0;
+
+    let mut event_set = EventSet::new(cpu_id)?;
+    event_set.cache_references.enable();
+    event_set.cache_misses.enable();
+    event_set.branch_instructions.enable();
+    event_set.branch_misses.enable();
+
     println!("CPU performance for cpu = {}", cpu_id);
     println!(
         "{:^8} {:^20} {:^20} {:^20} {:^20}",
@@ -18,50 +21,15 @@ fn main() -> io::Result<()> {
 
     let mut t = 0;
     loop {
-        let attrs_flags = PerfEventFlags::EXCLUDE_HV;
-        let flags = 0;
-
-        let cache_access_events = PerfEvent::open(
-            PerfEventAttr::new(EventType::CacheReferences).with_flags(attrs_flags),
-            None,
-            -1,
-            cpu_id,
-            flags,
-        )?;
-        let parent_fd = cache_access_events.fd;
-        let cache_miss_events = PerfEvent::open(
-            PerfEventAttr::new(EventType::CacheMisses).with_flags(attrs_flags),
-            Some(parent_fd),
-            -1,
-            cpu_id,
-            flags,
-        )?;
-        let branch_retired_events = PerfEvent::open(
-            PerfEventAttr::new(EventType::BranchInstructions).with_flags(attrs_flags),
-            Some(parent_fd),
-            -1,
-            cpu_id,
-            flags,
-        )?;
-        let branch_miss_events = PerfEvent::open(
-            PerfEventAttr::new(EventType::BranchMisses).with_flags(attrs_flags),
-            Some(parent_fd),
-            -1,
-            cpu_id,
-            flags,
-        )?;
-
-        cache_access_events.update_file_state(EventIOState::Refresh);
-        cache_access_events.update_file_state(EventIOState::Enable);
-
+        event_set.update_file_state(EventIOState::Enable)?;
         sleep(Duration::from_secs(1));
+        event_set.update_file_state(EventIOState::Disable)?;
+        let counts = event_set.get_counts()?;
 
-        cache_access_events.update_file_state(EventIOState::Disable);
-
-        let cache_accesses = cache_access_events.get_count()?;
-        let cache_misses = cache_miss_events.get_count()?;
-        let branch_instructions = branch_retired_events.get_count()?;
-        let branch_misses = branch_miss_events.get_count()?;
+        let cache_accesses = counts.num_cache_references;
+        let cache_misses = counts.num_cache_misses;
+        let branch_instructions = counts.num_branch_instructions;
+        let branch_misses = counts.num_branch_misses;
 
         println!(
             "{:^8} {:^20} {:^20} {:^20} {:^20}",
