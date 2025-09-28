@@ -45,9 +45,7 @@ unsafe extern "C" {
     /// `XOpenDisplay` - connect to X server (see `XCloseDisplay` for disconnect)
     ///
     /// ## C Syntax
-    /// ```
-    /// Display *XOpenDisplay(char *display_name);
-    /// ```
+    /// `Display *XOpenDisplay(char *display_name);`
     /// ## C Arguments
     /// `display_name`: Specifies the hardware display name, which determines the display and communications domain to be used. On a POSIX-conformant system, if the display_name is `NULL`, it defaults to the value of the `DISPLAY` environment variable.
     ///
@@ -62,9 +60,7 @@ unsafe extern "C" {
     /// The `DefaultScreen` macro returns the default screen number referenced in the `XOpenDisplay` routine.
     ///
     /// ## C Syntax
-    /// ```
-    /// int DefaultScreen(Display *display);
-    /// ```
+    /// `int DefaultScreen(Display *display);`
     ///
     /// ## C Arguments
     ///
@@ -76,9 +72,7 @@ unsafe extern "C" {
     /// The `RootWindow` macro returns the root window.
     ///
     /// ## C Syntax
-    /// ```
-    /// Window RootWindow(Display *display, int screen_number);
-    /// ```
+    /// `Window RootWindow(Display *display, int screen_number);`
     ///
     /// ## C Arguments
     ///
@@ -92,9 +86,7 @@ unsafe extern "C" {
     /// `XCreateWindow`, `XCreateSimpleWindow`, `XSetWindowAttributes` - create windows and window attributes struct
     ///
     /// ## C Syntax
-    /// ```
-    /// Window XCreateSimpleWindow(Display *display, Window parent, int x, int y, unsigned int width, unsigned int height, unsigned int border_width, unsigned long border, unsigned long background);
-    /// ```
+    /// `Window XCreateSimpleWindow(Display *display, Window parent, int x, int y, unsigned int width, unsigned int height, unsigned int border_width, unsigned long border, unsigned long background);`
     ///
     /// ## C Arguments
     ///
@@ -140,9 +132,7 @@ unsafe extern "C" {
     /// `XMapWindow` - map windows
     ///
     /// ## C Syntax
-    /// ```
-    /// int XMapWindow(Display *display, Window w);
-    /// ```
+    /// `int XMapWindow(Display *display, Window w);`
     /// ## C Arguments
     ///
     /// `display` - Specifies the connection to the X server.
@@ -169,9 +159,7 @@ unsafe extern "C" {
     /// `XStoreName` - set or read a window's `WM_NAME` property
     ///
     /// ## C Syntax
-    /// ```
-    /// int XStoreName(Display *display, Window w, char *window_name);
-    /// ```
+    /// `int XStoreName(Display *display, Window w, char *window_name);`
     ///
     /// ## C Arguments
     ///
@@ -195,10 +183,7 @@ unsafe extern "C" {
     /// `XSelectInput` - select input events
     ///
     /// ## C Syntax
-    /// ```
-    /// int XSelectInput(Display *display, Window w, long
-    ///     event_mask);
-    /// ```
+    /// `int XSelectInput(Display *display, Window w, long event_mask);`
     /// ## C Arguments
     ///
     /// `display` - Specifies the connection to the X server.
@@ -231,9 +216,7 @@ unsafe extern "C" {
     /// `XNextEvent` - select events by type
     ///
     /// ## C Syntax
-    /// ```
-    /// int XNextEvent(Display *display, XEvent *event_return);
-    /// ```
+    /// `int XNextEvent(Display *display, XEvent *event_return);`
     /// ## C Attributes
     ///
     /// `display` - Specifies the connection to the X server.
@@ -249,9 +232,7 @@ unsafe extern "C" {
     /// XDestroyWindow - destroy windows
     ///
     /// ## C Syntax
-    /// ```
-    /// int XDestroyWindow(Display *display, Window w);
-    /// ```
+    /// `int XDestroyWindow(Display *display, Window w)`
     /// ## C Attributes
     ///
     /// `display` - Specifies the connection to the X server.
@@ -296,9 +277,7 @@ unsafe extern "C" {
     ///
     ///    ## C Syntax
     ///
-    ///    ```
-    ///     int XPutImage(Display *display, Drawable d, GC gc, XImage *image, int src_x, int src_y, int dest_x, int dest_y, unsigned int width, unsigned int height);
-    ///    ```
+    ///    `int XPutImage(Display *display, Drawable d, GC gc, XImage *image, int src_x, int src_y, int dest_x, int dest_y, unsigned int width, unsigned int height);`
     ///
     ///    ## C Attributes
     ///
@@ -355,9 +334,9 @@ unsafe extern "C" {
     /// #`XCloseDisplay` - disconnect from X Server
     ///
     /// ## C Syntax
-    /// ```
-    /// int XCloseDisplay(Display *display);
-    /// ```
+    ///
+    /// `int XCloseDisplay(Display *display);`
+    ///
     /// ## C Arguments
     /// `display`: Specifies the connection to the X server.
     ///

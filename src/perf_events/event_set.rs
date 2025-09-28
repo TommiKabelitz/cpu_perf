@@ -6,6 +6,7 @@ use super::{
     EventIOState, EventType, PerfEvent, PerfEventAttr, SIZE_OF_U64, flags::PerfEventFlags,
 };
 
+#[derive(Default, Clone, Copy)]
 pub struct EventCounts {
     pub num_cpu_cycles: u64,
     pub num_instructions: u64,
