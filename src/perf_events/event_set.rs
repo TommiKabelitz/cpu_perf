@@ -21,21 +21,29 @@ pub struct EventCounts {
 pub const SIZE_OF_EVENT_COUNTS: usize = std::mem::size_of::<EventCounts>();
 
 pub struct EventSet {
-    pub parent_fd: i32,
-    pub cpu_cycles: PerfEvent,
-    pub instructions: PerfEvent,
-    pub cache_references: PerfEvent,
-    pub cache_misses: PerfEvent,
-    pub branch_instructions: PerfEvent,
-    pub branch_misses: PerfEvent,
-    pub bus_cycles: PerfEvent,
-    // pub stalled_cycles_frontend: PerfEvent,
-    // pub stalled_cycles_backend: PerfEvent,
-    pub ref_cpu_cycles: PerfEvent,
+    parent_fd: i32,
+    cpu_cycles: PerfEvent,
+    instructions: PerfEvent,
+    cache_references: PerfEvent,
+    cache_misses: PerfEvent,
+    branch_instructions: PerfEvent,
+    branch_misses: PerfEvent,
+    bus_cycles: PerfEvent,
+    // stalled_cycles_frontend: PerfEvent,
+    // stalled_cycles_backend: PerfEvent,
+    ref_cpu_cycles: PerfEvent,
 }
 
 impl EventSet {
-    pub fn new(cpu_id: i32) -> io::Result<Self> {
+    pub fn new(cpu_id: Option<u32>, process_id: Option<u32>) -> io::Result<Self> {
+        if cpu_id.is_none() && process_id.is_none() {
+            return Err(io::Error::other(
+                "Process Id and CPU Id cannot both be None",
+            ));
+        }
+        let cpu_id = cpu_id.map_or(-1, |id| id as i32);
+        let process_id = process_id.map_or(-1, |id| id as i32);
+
         let flags = 0;
         let attrs_flags = PerfEventFlags::EXCLUDE_HV;
 
@@ -45,20 +53,19 @@ impl EventSet {
                 .with_flags(attrs_flags)
                 .with_perf_format_group(),
             None,
-            -1,
+            process_id,
             cpu_id,
             flags,
         )?;
 
         // TODO: Consider a macro for this
         let parent_fd = cpu_cycles.fd;
-        let attrs_flags = attrs_flags; //| PerfEventFlags::DISABLED;
         let instructions = PerfEvent::open(
             PerfEventAttr::new(EventType::Instructions)
                 .with_flags(attrs_flags)
                 .with_perf_format_group(),
             Some(parent_fd),
-            -1,
+            process_id,
             cpu_id,
             flags,
         )?;
@@ -67,7 +74,7 @@ impl EventSet {
                 .with_flags(attrs_flags)
                 .with_perf_format_group(),
             Some(parent_fd),
-            -1,
+            process_id,
             cpu_id,
             flags,
         )?;
@@ -76,7 +83,7 @@ impl EventSet {
                 .with_flags(attrs_flags)
                 .with_perf_format_group(),
             Some(parent_fd),
-            -1,
+            process_id,
             cpu_id,
             flags,
         )?;
@@ -85,7 +92,7 @@ impl EventSet {
                 .with_flags(attrs_flags)
                 .with_perf_format_group(),
             Some(parent_fd),
-            -1,
+            process_id,
             cpu_id,
             flags,
         )?;
@@ -94,35 +101,35 @@ impl EventSet {
                 .with_flags(attrs_flags)
                 .with_perf_format_group(),
             Some(parent_fd),
-            -1,
+            process_id,
             cpu_id,
             flags,
         )?;
         let bus_cycles = PerfEvent::open(
             PerfEventAttr::new(EventType::BusCycles).with_perf_format_group(),
             Some(parent_fd),
-            -1,
+            process_id,
             cpu_id,
             flags,
         )?;
         // let stalled_cycles_frontend = PerfEvent::open(
         //     PerfEventAttr::new(EventType::StalledCyclesFrontend).with_perf_format_group(),
         //     Some(parent_fd),
-        //     -1,
+        //     process_id,
         //     cpu_id,
         //     flags,
         // )?;
         // let stalled_cycles_backend = PerfEvent::open(
         //     PerfEventAttr::new(EventType::StalledCyclesBackend).with_perf_format_group(),
         //     Some(parent_fd),
-        //     -1,
+        //     process_id,
         //     cpu_id,
         //     flags,
         // )?;
         let ref_cpu_cycles = PerfEvent::open(
             PerfEventAttr::new(EventType::RefCpuCycles).with_perf_format_group(),
             Some(parent_fd),
-            -1,
+            process_id,
             cpu_id,
             flags,
         )?;
@@ -140,6 +147,38 @@ impl EventSet {
             // stalled_cycles_backend,
             ref_cpu_cycles,
         })
+    }
+
+    pub fn enable(&mut self, events: &[EventType]) {
+        for event in events {
+            match event {
+                EventType::BranchInstructions => self.branch_instructions.enable(),
+                EventType::BranchMisses => self.branch_misses.enable(),
+                EventType::BusCycles => self.bus_cycles.enable(),
+                EventType::CacheMisses => self.cache_misses.enable(),
+                EventType::CacheReferences => self.cache_references.enable(),
+                EventType::Instructions => self.instructions.enable(),
+                EventType::RefCpuCycles => self.ref_cpu_cycles.enable(),
+                EventType::CpuCycles => self.cpu_cycles.enable(),
+            }
+        }
+    }
+
+    pub fn disable(&mut self, events: &[EventType]) {
+        for event in events {
+            match event {
+                EventType::BranchInstructions => self.branch_instructions.disable(),
+                EventType::BranchMisses => self.branch_misses.disable(),
+                EventType::BusCycles => self.bus_cycles.disable(),
+                EventType::CacheMisses => self.cache_misses.disable(),
+                EventType::CacheReferences => self.cache_references.disable(),
+                EventType::Instructions => self.instructions.disable(),
+                EventType::RefCpuCycles => self.ref_cpu_cycles.disable(),
+                EventType::CpuCycles => {
+                    eprintln!("Note: CpuCycles cannot be disabled as it is the parent of the group")
+                }
+            }
+        }
     }
 
     pub fn update_file_state(&self, state: EventIOState) -> io::Result<i32> {

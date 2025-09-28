@@ -27,8 +27,8 @@ pub enum EventType {
     BranchInstructions = 4,
     BranchMisses = 5,
     BusCycles = 6,
-    StalledCyclesFrontend = 7,
-    StalledCyclesBackend = 8,
+    // StalledCyclesFrontend = 7,
+    // StalledCyclesBackend = 8,
     RefCpuCycles = 9,
 }
 
@@ -167,10 +167,7 @@ impl PerfEvent {
                 io::ErrorKind::UnexpectedEof,
                 format!("short read: got {} bytes, expected {}", n, SIZE_OF_U64),
             )),
-            _ => Err(io::Error::new(
-                io::ErrorKind::Other,
-                format!("Somehow wrote too many bytes"),
-            )),
+            _ => Err(io::Error::other("Somehow wrote too many bytes")),
         }
     }
 
