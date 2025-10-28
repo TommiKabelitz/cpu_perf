@@ -8,6 +8,7 @@ use cpu_perf::{
     sliding_window::SlidingBuffer,
     window::X11Window,
 };
+use two_dim_array::TwoDimensionalArray;
 
 const WIDTH: u32 = 1080;
 const HEIGHT: u32 = 720;
@@ -41,6 +42,10 @@ fn main() -> io::Result<()> {
         "t", "cache accesses", "cache misses", "branch instructions", "branch misses"
     );
 
+    let mut two_dim_buffer_view =
+        TwoDimensionalArray::new(&mut buffer, HEIGHT as usize, WIDTH as usize)
+            .expect("Failed to init buffer as 2D");
+
     let mut t: usize = 0;
     loop {
         x11_window.update_window();
@@ -62,8 +67,8 @@ fn main() -> io::Result<()> {
         plot_data_from_buffer(
             data_buffer.get_current_window(),
             NUM_TIME_SLICES,
-            &mut buffer,
-            2,
+            &mut two_dim_buffer_view,
+            6,
             WIDTH as usize,
             HEIGHT as usize,
             0xff00ff00,

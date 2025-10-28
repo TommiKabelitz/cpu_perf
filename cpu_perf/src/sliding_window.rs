@@ -1,6 +1,6 @@
 pub struct SlidingBuffer<T> {
     window_size: usize,
-    /// Current starting index of the small buffer
+    /// Current _starting_ index of the small buffer
     current_index: usize,
     buffer: Box<[T]>,
 }

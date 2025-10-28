@@ -1,0 +1,8 @@
+[package]
+name = "cpu_perf"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+libc = "0.2"
+two_dim_array = { path = "../crates/two_dim_array" }
