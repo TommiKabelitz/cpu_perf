@@ -21,11 +21,6 @@ pub fn plot_square(
     {
         row[col_start..col_end].fill(colour);
     }
-
-    // let top_left = centre - width / 2 - width / 2 * buffer_width;
-    // for i in 0..width {
-    //     buffer[top_left + i * buffer_width..top_left + width + i * buffer_width].fill(colour);
-    // }
 }
 
 pub fn plot_data_from_buffer(
