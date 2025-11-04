@@ -1,6 +1,6 @@
-use std::io;
 use std::thread::sleep;
 use std::time::Duration;
+use std::{io, time::SystemTime};
 
 use cpu_perf::{
     perf_events::{EventCounts, EventIOState, EventSet, EventType},
@@ -96,14 +96,17 @@ fn main() -> io::Result<()> {
         PLOT_TIME_EXTENT,
     );
 
+    let sleep_duration = Duration::from_secs_f64(SLEEP_TIME);
     let mut t: usize = 0;
+    #[allow(unused_assignments)]
+    let mut started_harvesting = SystemTime::now();
     loop {
+        let counts = event_set.get_counts()?;
+        event_set.update_file_state(EventIOState::Enable)?;
+        started_harvesting = SystemTime::now();
+
         x11_window.update_window();
 
-        event_set.update_file_state(EventIOState::Enable)?;
-        sleep(Duration::from_secs_f64(SLEEP_TIME));
-        event_set.update_file_state(EventIOState::Disable)?;
-        let counts = event_set.get_counts()?;
         if print_out {
             println!(
                 "{:^8} {:^20} {:^20} {:^20} {:^20}",
@@ -137,5 +140,13 @@ fn main() -> io::Result<()> {
 
         t += 1;
         x11_window.show();
+        sleep(
+            sleep_duration.saturating_sub(
+                SystemTime::now()
+                    .duration_since(started_harvesting)
+                    .unwrap_or(sleep_duration),
+            ),
+        );
+        event_set.update_file_state(EventIOState::Disable)?;
     }
 }
