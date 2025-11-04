@@ -9,12 +9,14 @@ use c_interface::{
     XImage, XMapWindow, XNextEvent, XOpenDisplay, XPutImage, XRootWindow, XSelectInput, XStoreName,
 };
 
+use crate::window::c_interface::XFreeGC;
+
 mod c_interface;
 
 pub struct X11Window {
     display: *mut Display,
-    screen: Screen,
-    root_window: Window,
+    _screen: Screen,
+    _root_window: Window,
     window: Window,
     gc: *mut GraphicsContext,
     image: *mut XImage,
@@ -23,7 +25,8 @@ pub struct X11Window {
 }
 
 impl X11Window {
-    pub fn new<'a>(
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
         x: i32,
         y: i32,
         width: u32,
@@ -31,7 +34,7 @@ impl X11Window {
         border_width: u32,
         border: u64,
         background: u64,
-        data_buffer: &'a Vec<u32>,
+        data_buffer: &[u32],
     ) -> Option<Self> {
         let display = unsafe { XOpenDisplay(ptr::null()) };
         if display.is_null() {
@@ -82,8 +85,8 @@ impl X11Window {
 
         Some(Self {
             display,
-            screen,
-            root_window,
+            _screen: screen,
+            _root_window: root_window,
             window,
             gc,
             image,
@@ -140,6 +143,7 @@ impl Drop for X11Window {
             return;
         }
         unsafe {
+            XFreeGC(self.display, self.gc);
             XDestroyWindow(self.display, self.window);
             XCloseDisplay(self.display);
         }

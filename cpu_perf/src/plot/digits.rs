@@ -1,4 +1,4 @@
-use std::f32::consts::E;
+#![allow(dead_code)]
 
 #[rustfmt::skip]
 pub const ONE: [u8; 128] = [

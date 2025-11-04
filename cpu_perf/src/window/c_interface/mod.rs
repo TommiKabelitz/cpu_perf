@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use std::os::raw::{c_char, c_int, c_long, c_uint, c_ulong};
 
 use xgc_values::XgcValues;
