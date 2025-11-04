@@ -2,9 +2,7 @@ use two_dim_array::TwoDimensionalArray;
 
 use crate::{
     perf_events::EventCounts,
-    plot::digits::{
-        DECIMAL_POINT, EIGHT, FIVE, FOUR, MINUS, NINE, ONE, SEVEN, SIX, THREE, TWO, ZERO,
-    },
+    plot::digits::{DECIMAL_POINT, ONE, ORDERED_DIGITS, ZERO},
 };
 mod digits;
 
@@ -66,33 +64,82 @@ pub fn decorate_plot(
     plot_height: usize,
     time_extent: f64,
 ) {
-    let mut x = plot_x + 10;
-    let y = plot_y + plot_height + 10;
+    // y-axis
+    let x_start = plot_x - 5 * 8;
+    let vertical_separation = plot_height / 10;
+    for (i, digit) in ORDERED_DIGITS.iter().enumerate() {
+        // Render 0.x
+        render_digit(
+            window_buffer,
+            x_start,
+            plot_y + plot_height - i * vertical_separation - 8,
+            &ZERO,
+        );
+        render_digit(
+            window_buffer,
+            x_start + 9,
+            plot_y + plot_height - i * vertical_separation - 8,
+            &DECIMAL_POINT,
+        );
+        render_digit(
+            window_buffer,
+            x_start + 18,
+            plot_y + plot_height - i * vertical_separation - 8,
+            digit,
+        );
+        // Render tick mark
+        window_buffer
+            .get_mut_panic(
+                plot_y + plot_height - i * vertical_separation,
+                plot_x - 8..plot_x,
+            )
+            .fill(0xffffffff);
+        window_buffer
+            .get_mut_panic(
+                plot_y + plot_height - i * vertical_separation - 1,
+                plot_x - 8..plot_x,
+            )
+            .fill(0xffffffff);
+    }
+    // Render 1.0
+    render_digit(window_buffer, x_start, plot_y - 8, &ONE);
+    render_digit(window_buffer, x_start + 9, plot_y - 8, &DECIMAL_POINT);
+    render_digit(window_buffer, x_start + 18, plot_y - 8, &ZERO);
+    // Render tick mark
+    window_buffer
+        .get_mut_panic(plot_y, plot_x - 8..plot_x)
+        .fill(0xffffffff);
+    window_buffer
+        .get_mut_panic(plot_y - 1, plot_x - 8..plot_x)
+        .fill(0xffffffff);
 
-    render_digit(window_buffer, x, y, &MINUS);
-    x += 9;
-    render_digit(window_buffer, x, y, &ZERO);
-    x += 9;
-    render_digit(window_buffer, x, y, &ONE);
-    x += 9;
-    render_digit(window_buffer, x, y, &TWO);
-    x += 9;
-    render_digit(window_buffer, x, y, &DECIMAL_POINT);
-    x += 9;
-    render_digit(window_buffer, x, y, &THREE);
-    x += 9;
-    render_digit(window_buffer, x, y, &FOUR);
-    x += 9;
-    render_digit(window_buffer, x, y, &FIVE);
-    x += 9;
-    render_digit(window_buffer, x, y, &SIX);
-    x += 9;
-    render_digit(window_buffer, x, y, &SEVEN);
-    x += 9;
-    render_digit(window_buffer, x, y, &EIGHT);
-    x += 9;
-    render_digit(window_buffer, x, y, &NINE);
-    x += 9;
+    // x-axis
+    let tick_spacing = 2;
+    let label_separation = (plot_width as f64 / time_extent * tick_spacing as f64) as usize;
+    let n_labels = plot_width / label_separation + 1;
+    let mut label = 0;
+    for i in 0..n_labels {
+        let mut x = plot_x + plot_width - i * label_separation - 1;
+        // Render tick mark
+        for i in 0..8 {
+            window_buffer
+                .get_mut_panic(plot_y + plot_height + i, x..x + 2)
+                .fill(0xffffffff);
+        }
+        let mut num = label;
+        while num != 0 {
+            let digit = num % 10;
+            render_digit(
+                window_buffer,
+                x,
+                plot_y + plot_height + 18,
+                &ORDERED_DIGITS[digit],
+            );
+            x -= 9;
+            num /= 10;
+        }
+        label += tick_spacing;
+    }
 }
 
 fn render_digit(

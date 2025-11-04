@@ -1,3 +1,5 @@
+use std::f32::consts::E;
+
 #[rustfmt::skip]
 pub const ONE: [u8; 128] = [
     0, 0, 0, 0, 0, 0, 1, 1,
@@ -237,3 +239,6 @@ pub const DECIMAL_POINT: [u8; 128] = [
     0, 0, 0, 1, 1, 0, 0, 0,
     0, 0, 0, 1, 1, 0, 0, 0,
 ];
+
+pub const ORDERED_DIGITS: [[u8; 128]; 10] =
+    [ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE];
