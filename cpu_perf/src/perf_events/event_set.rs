@@ -6,21 +6,59 @@ use super::{
     EventIOState, EventType, PerfEvent, PerfEventAttr, SIZE_OF_U64, flags::PerfEventFlags,
 };
 
+/// Counts of each event for a single event period
 #[derive(Default, Clone, Copy)]
 pub struct EventCounts {
+    /// Total CPU cycles. Be wary of what happens as the CPU frequency
+    /// scales.
     pub num_cpu_cycles: u64,
+    /// Retired instructions. Can be affected by various issues, most
+    /// notable hardware interrupt counts.
     pub num_instructions: u64,
+    /// Cache accesses, generally Last Level Cache but may vary
+    /// depending on your CPU. May also include prefetches and coherency
+    /// messages, again CPU dependent.
     pub num_cache_references: u64,
+    /// Cache misses, as with `num_cache_references`, generally Last
+    /// Level Cache, but CPU dependent. Intended for calculating miss
+    /// rate with `num_cache_references`.
     pub num_cache_misses: u64,
+    /// Retired branch instruction.
     pub num_branch_instructions: u64,
+    /// Mispredicted branch instructions.
     pub num_branch_misses: u64,
+    /// Bus cycles, not to be confused with total cycles.
     pub num_bus_cycles: u64,
     // pub num_stalled_cycles_frontend: u64,
     // pub num_stalled_cycles_backend: u64,
+    /// Total cycles, not influenced by CPU frequency scaling.
     pub num_ref_cpu_cycles: u64,
 }
 pub const SIZE_OF_EVENT_COUNTS: usize = std::mem::size_of::<EventCounts>();
 
+/// Struct that wraps a set of perf_event file descriptors
+///
+/// Can track any combination of [`EventType`], across
+///
+/// - All CPUs for a specific process.
+/// - All processes on a specific CPU.
+/// - A specific process on a specific CPU.
+///
+/// Event types are enabled and disabled using [`Self::enable`] and
+/// [`Self::disable`].
+///
+/// Measurement starts and stops by calling [`Self::update_file_state`]
+/// with [`EventIOState::Enable`] and [`EventIOState::Disable`].
+///
+/// The most recent set of counts between enable and disable are obtained
+/// through [`Self::get_counts`].
+///
+/// As the different EventTypes are collected into a group,
+/// one event must be the parent. [`EventType::CpuCycles`] has
+/// been arbitrarily chosen as the parent. As such, it cannot
+/// be disabled as that will disable the whole group.
+///
+/// The whole group can be disabled using [`Self::disable_group`].
 pub struct EventSet {
     parent_fd: i32,
     cpu_cycles: PerfEvent,
@@ -150,6 +188,9 @@ impl EventSet {
         })
     }
 
+    /// Enable tracking of a set of events.
+    ///
+    /// See [`Self::update_file_state`] for starting the actual counting.
     pub fn enable(&mut self, events: &[EventType]) {
         for event in events {
             match event {
@@ -165,6 +206,9 @@ impl EventSet {
         }
     }
 
+    /// Disable tracking of a set of events.
+    ///
+    /// See [`Self::update_file_state`] for ending the actual counting.
     pub fn disable(&mut self, events: &[EventType]) {
         for event in events {
             match event {
@@ -182,6 +226,9 @@ impl EventSet {
         }
     }
 
+    /// Update the state of the file which collects event counts.
+    /// Use this to start and end counting by passing
+    /// [`EventIOState::Enable`] and [`EventIOState::Disable`].
     pub fn update_file_state(&self, state: EventIOState) -> io::Result<i32> {
         let res = unsafe { ioctl(self.parent_fd, state as u64, 0) };
         if res < 0 {
@@ -191,6 +238,8 @@ impl EventSet {
         }
     }
 
+    /// Get the counts currently in the count file. Calling this
+    /// while counting is technically probably okay, but not advised.
     pub fn get_counts(&self) -> io::Result<EventCounts> {
         let mut buf: [u64; SIZE_OF_EVENT_COUNTS / SIZE_OF_U64 + 1] =
             [0; SIZE_OF_EVENT_COUNTS / SIZE_OF_U64 + 1];
@@ -205,7 +254,7 @@ impl EventSet {
         if res < 0 {
             return Err(io::Error::last_os_error());
         }
-
+        // buf[0] holds the number of events (types)
         Ok(EventCounts {
             num_cpu_cycles: buf[1],
             num_instructions: buf[2],
