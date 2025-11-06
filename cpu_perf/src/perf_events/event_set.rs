@@ -95,7 +95,8 @@ impl EventSet {
             process_id,
             cpu_id,
             flags,
-        )?;
+        )
+        .inspect_err(|_| eprintln!("Error initialising parent file descriptor: CpuCycles"))?;
 
         // TODO: Consider a macro for this
         let parent_fd = cpu_cycles.fd;
@@ -107,7 +108,8 @@ impl EventSet {
             process_id,
             cpu_id,
             flags,
-        )?;
+        )
+        .inspect_err(|_| eprintln!("Error initialising file descriptor: Instructions"))?;
         let cache_references = PerfEvent::open(
             PerfEventAttr::new(EventType::CacheReferences)
                 .with_flags(attrs_flags)
@@ -116,7 +118,8 @@ impl EventSet {
             process_id,
             cpu_id,
             flags,
-        )?;
+        )
+        .inspect_err(|_| eprintln!("Error initialising file descriptor: CacheReferences"))?;
         let cache_misses = PerfEvent::open(
             PerfEventAttr::new(EventType::CacheMisses)
                 .with_flags(attrs_flags)
@@ -125,7 +128,8 @@ impl EventSet {
             process_id,
             cpu_id,
             flags,
-        )?;
+        )
+        .inspect_err(|_| eprintln!("Error initialising file descriptor: CacheMisses"))?;
         let branch_instructions = PerfEvent::open(
             PerfEventAttr::new(EventType::BranchInstructions)
                 .with_flags(attrs_flags)
@@ -134,7 +138,8 @@ impl EventSet {
             process_id,
             cpu_id,
             flags,
-        )?;
+        )
+        .inspect_err(|_| eprintln!("Error initialising file descriptor: BranchInstructions"))?;
         let branch_misses = PerfEvent::open(
             PerfEventAttr::new(EventType::BranchMisses)
                 .with_flags(attrs_flags)
@@ -143,35 +148,38 @@ impl EventSet {
             process_id,
             cpu_id,
             flags,
-        )?;
+        )
+        .inspect_err(|_| eprintln!("Error initialising file descriptor: BranchMisses"))?;
         let bus_cycles = PerfEvent::open(
             PerfEventAttr::new(EventType::BusCycles).with_perf_format_group(),
             Some(parent_fd),
             process_id,
             cpu_id,
             flags,
-        )?;
+        )
+        .inspect_err(|_| eprintln!("Error initialising file descriptor: BusCycles"))?;
         // let stalled_cycles_frontend = PerfEvent::open(
         //     PerfEventAttr::new(EventType::StalledCyclesFrontend).with_perf_format_group(),
         //     Some(parent_fd),
         //     process_id,
         //     cpu_id,
         //     flags,
-        // )?;
+        // ).inspect_err(|_| eprintln!("Error initialising file descriptor: StalledCyclesFrontend"))?;
         // let stalled_cycles_backend = PerfEvent::open(
         //     PerfEventAttr::new(EventType::StalledCyclesBackend).with_perf_format_group(),
         //     Some(parent_fd),
         //     process_id,
         //     cpu_id,
         //     flags,
-        // )?;
+        // ).inspect_err(|_| eprintln!("Error initialising file descriptor: StalledCyclesBackend"))?;
         let ref_cpu_cycles = PerfEvent::open(
             PerfEventAttr::new(EventType::RefCpuCycles).with_perf_format_group(),
             Some(parent_fd),
             process_id,
             cpu_id,
             flags,
-        )?;
+        )
+        .inspect_err(|_| eprintln!("Error initialising file descriptor: RefCpuCycles"))?;
 
         Ok(Self {
             parent_fd,
