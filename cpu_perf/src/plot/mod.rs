@@ -1,10 +1,15 @@
+pub mod colours;
+mod digits;
+
 use two_dim_array::TwoDimensionalArray;
 
 use crate::{
     perf_events::EventCounts,
-    plot::digits::{DECIMAL_POINT, ONE, ORDERED_DIGITS, ZERO},
+    plot::{
+        colours::Colour,
+        digits::{DECIMAL_POINT, ONE, ORDERED_DIGITS, ZERO},
+    },
 };
-mod digits;
 
 pub fn plot_square(
     buffer: &mut TwoDimensionalArray<u32>,
@@ -56,6 +61,7 @@ pub fn plot_data_from_buffer(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn decorate_plot(
     window_buffer: &mut TwoDimensionalArray<u32>,
     plot_x: usize,
@@ -63,29 +69,35 @@ pub fn decorate_plot(
     plot_width: usize,
     plot_height: usize,
     time_extent: f64,
+    text_colour: Colour,
+    background_colour: Colour,
 ) {
+    window_buffer.as_mut_slice().fill(background_colour as u32);
     // y-axis
     let x_start = plot_x - 5 * 8;
     let vertical_separation = plot_height / 10;
+    // Render 0.x
     for (i, digit) in ORDERED_DIGITS.iter().enumerate() {
-        // Render 0.x
         render_digit(
             window_buffer,
             x_start,
             plot_y + plot_height - i * vertical_separation - 8,
             &ZERO,
+            text_colour,
         );
         render_digit(
             window_buffer,
             x_start + 9,
             plot_y + plot_height - i * vertical_separation - 8,
             &DECIMAL_POINT,
+            text_colour,
         );
         render_digit(
             window_buffer,
             x_start + 18,
             plot_y + plot_height - i * vertical_separation - 8,
             digit,
+            text_colour,
         );
         // Render tick mark
         window_buffer
@@ -93,25 +105,33 @@ pub fn decorate_plot(
                 plot_y + plot_height - i * vertical_separation,
                 plot_x - 8..plot_x,
             )
-            .fill(0xffffffff);
+            .fill(text_colour as u32);
         window_buffer
             .get_mut_panic(
                 plot_y + plot_height - i * vertical_separation - 1,
                 plot_x - 8..plot_x,
             )
-            .fill(0xffffffff);
+            .fill(text_colour as u32);
     }
+
     // Render 1.0
-    render_digit(window_buffer, x_start, plot_y - 8, &ONE);
-    render_digit(window_buffer, x_start + 9, plot_y - 8, &DECIMAL_POINT);
-    render_digit(window_buffer, x_start + 18, plot_y - 8, &ZERO);
+    render_digit(window_buffer, x_start, plot_y - 8, &ONE, text_colour);
+    render_digit(
+        window_buffer,
+        x_start + 9,
+        plot_y - 8,
+        &DECIMAL_POINT,
+        text_colour,
+    );
+    render_digit(window_buffer, x_start + 18, plot_y - 8, &ZERO, text_colour);
+
     // Render tick mark
     window_buffer
         .get_mut_panic(plot_y, plot_x - 8..plot_x)
-        .fill(0xffffffff);
+        .fill(text_colour as u32);
     window_buffer
         .get_mut_panic(plot_y - 1, plot_x - 8..plot_x)
-        .fill(0xffffffff);
+        .fill(text_colour as u32);
 
     // x-axis
     let tick_spacing = 2;
@@ -124,19 +144,23 @@ pub fn decorate_plot(
         for i in 0..8 {
             window_buffer
                 .get_mut_panic(plot_y + plot_height + i, x..x + 2)
-                .fill(0xffffffff);
+                .fill(text_colour as u32);
         }
         let mut num = label;
-        while num != 0 {
+        loop {
             let digit = num % 10;
             render_digit(
                 window_buffer,
                 x,
                 plot_y + plot_height + 18,
                 &ORDERED_DIGITS[digit],
+                text_colour,
             );
             x -= 9;
             num /= 10;
+            if num == 0 {
+                break;
+            }
         }
         label += tick_spacing;
     }
@@ -147,12 +171,16 @@ fn render_digit(
     x: usize,
     y: usize,
     digit: &[u8; 128],
+    colour: Colour,
 ) {
     let mut y = y;
     for row in digit.chunks_exact(8) {
         let slice = window_buffer.get_mut_panic(y, x..x + 8);
         for i in 0..8 {
-            slice[i] = row[i] as u32 * 0xffffffff;
+            // Could rewrite branchless, but leave it for now
+            if row[i] == 1 {
+                slice[i] = colour as u32;
+            }
         }
         y += 1;
     }

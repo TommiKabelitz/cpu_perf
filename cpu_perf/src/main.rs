@@ -44,20 +44,11 @@ fn main() -> io::Result<()> {
 
     let mut data_buffer = SlidingBuffer::new(EventCounts::default(), NUM_TIME_SLICES);
 
-    let mut window_buffer: Vec<u32> = vec![0xff141414; WIDTH * HEIGHT];
-    let mut plot_buffer: Vec<u32> = vec![0xff000000; PLOT_BUFFER_WIDTH * PLOT_BUFFER_HEIGHT];
+    let mut window_buffer: Vec<u32> = vec![0; WIDTH * HEIGHT];
+    let mut plot_buffer: Vec<u32> = vec![0; PLOT_BUFFER_WIDTH * PLOT_BUFFER_HEIGHT];
 
-    let x11_window = X11Window::new(
-        0,
-        0,
-        WIDTH as u32,
-        HEIGHT as u32,
-        1,
-        1,
-        0xffffff,
-        &window_buffer,
-    )
-    .expect("Failed to open window");
+    let x11_window = X11Window::new(0, 0, WIDTH as u32, HEIGHT as u32, 1, 1, 0, &window_buffer)
+        .expect("Failed to open window");
     x11_window.set_title("window").expect("Failed to set title");
     x11_window.show();
     x11_window.wait_map_notify();
@@ -94,6 +85,8 @@ fn main() -> io::Result<()> {
         PLOT_BUFFER_WIDTH,
         PLOT_BUFFER_HEIGHT,
         PLOT_TIME_EXTENT,
+        Colour::WHITE,
+        Colour::GREY,
     );
 
     let sleep_duration = Duration::from_secs_f64(SLEEP_TIME);
